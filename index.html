@@ -96,6 +96,14 @@
         🛒 Mi Carrito <span class="cart-badge" id="cart-count">0</span>
     </button>
 
+    <!-- Modal para ver producto ampliado -->
+    <div class="modal-overlay" id="modal-producto">
+        <div class="product-modal" id="product-modal-box">
+            <button class="btn-close-modal product-close" onclick="cerrarProductoModal()" aria-label="Cerrar producto">✕</button>
+            <div class="product-modal-body" id="producto-detalle"></div>
+        </div>
+    </div>
+
     <!-- Modal del Carrito de Compras -->
     <div class="modal-overlay" id="modal-carrito">
         <div class="cart-modal" id="cart-modal-box">
@@ -150,6 +158,7 @@
                     <span>Total a pagar:</span>
                     <span id="cart-total">Q0.00</span>
                 </div>
+                <button class="btn-seguir-comprando" onclick="cerrarCarrito()">🛍️ Seguir comprando</button>
                 <button class="btn-confirmar-pedido" onclick="confirmarPedidoWhatsApp()">💬 Confirmar pedido por WhatsApp</button>
             </div>
         </div>
@@ -273,7 +282,7 @@ function renderizarProductos(productosParaMostrar) {
 
         card.innerHTML = `
             <div class="card-img-container">
-                <img src="${imgSrc}" alt="${titulo}">
+                <img src="${imgSrc}" alt="${titulo}" onclick="abrirProductoModal(${prod.id})" style="cursor:pointer;">
                 ${destacado ? '<span class="badge-destacado">Destacado</span>' : ''}
                 ${agotado ? '<span class="badge-agotado">Agotado</span>' : ''}
             </div>
@@ -376,6 +385,42 @@ function cerrarCarrito() {
     if (btnToggle) btnToggle.textContent = '—';
 }
 
+function abrirProductoModal(idProducto) {
+    const producto = todosLosProductos.find(p => p.id === idProducto);
+    if (!producto) return;
+
+    const contenedor = document.getElementById('producto-detalle');
+    const modal = document.getElementById('modal-producto');
+    const stock = Number(producto.stock ?? 0);
+    const titulo = escapeHtml(producto.titulo || 'Producto');
+    const categoria = escapeHtml(normalizarCategoria(producto.categoria || 'todos'));
+    const precio = Number(producto.precio_venta || 0);
+    const imagen = sanitizarUrl(producto.imagen || 'img/placeholder.jpg');
+
+    contenedor.innerHTML = `
+        <div class="product-modal-image-wrap">
+            <img src="${imagen}" alt="${titulo}" class="product-modal-image">
+        </div>
+        <div class="product-modal-info">
+            <span class="product-modal-category">${categoria}</span>
+            <h3>${titulo}</h3>
+            <div class="product-modal-price">Q${precio.toFixed(2)}</div>
+            <p class="product-modal-status">${stock > 0 ? 'Disponible ahora' : 'Agotado'}</p>
+            <p class="product-modal-description">${stock > 0 ? 'Producto disponible para entrega o retiro. Puedes agregarlo al carrito para coordinar tu pedido por WhatsApp.' : 'Este producto actualmente no tiene stock disponible.'}</p>
+            <button class="btn-buy product-modal-btn" onclick="agregarAlCarrito(${producto.id}); cerrarProductoModal();" ${stock > 0 ? '' : 'disabled'}>
+                ${stock > 0 ? '🛒 Agregar al carrito' : 'Sin stock'}
+            </button>
+        </div>
+    `;
+
+    if (modal) modal.classList.add('activo');
+}
+
+function cerrarProductoModal() {
+    const modal = document.getElementById('modal-producto');
+    if (modal) modal.classList.remove('activo');
+}
+
 function toggleCarritoTamano() {
     const modal = document.getElementById('cart-modal-box');
     const btnToggle = document.getElementById('btn-toggle-cart');
@@ -428,9 +473,6 @@ function confirmarPedidoWhatsApp() {
         return;
     }
 
-    const confirmar = confirm('¿Deseas confirmar este pedido por WhatsApp?');
-    if (!confirmar) return;
-
     enviarPedidoWhatsApp();
 }
 
@@ -465,6 +507,13 @@ function enviarPedidoWhatsApp() {
     const urlWhatsApp = `https://wa.me/${numeroTelefono}?text=${encodeURIComponent(mensaje)}`;
 
     window.open(urlWhatsApp, '_blank');
+
+    carrito = [];
+    guardarCarrito();
+    actualizarBadgeCarrito();
+    renderizarCarrito();
+    if (direccionCliente) direccionCliente.value = '';
+    cerrarCarrito();
 }
 
 // Inicializar la tienda al cargar la página
