@@ -64,17 +64,23 @@
     <main class="tienda-main">
         <!-- Controles de Búsqueda, Categorías y Orden -->
         <div class="controles-tienda">
-            <input type="text" id="input-busqueda" placeholder="Buscar productos..." onkeyup="aplicarFiltrosYOrden()">
+            <div class="busqueda-wrap">
+                <input type="text" id="input-busqueda" placeholder="Buscar productos..." autocomplete="off" oninput="onInputBusqueda()" onkeydown="onBusquedaKeydown(event)">
+                <button id="btn-busqueda" class="btn-busqueda" type="button" onclick="buscarGeneralRelacionada()" aria-label="Buscar productos relacionados">🔎</button>
+                <div id="sugerencias-busqueda" class="sugerencias-busqueda" role="listbox" aria-label="Sugerencias de productos"></div>
+            </div>
             
             <!-- Pestañas de Categorías -->
             <div class="categorias-tabs">
-                <button class="tab-btn activo" onclick="filtrarCategoria('todos', this)">Todos</button>
-                <button class="tab-btn" onclick="filtrarCategoria('accesorios', this)">Accesorios para carros y motos</button>
-                <button class="tab-btn" onclick="filtrarCategoria('tecnologia', this)">Tecnología</button>
-                <button class="tab-btn" onclick="filtrarCategoria('ferreteria', this)">Ferretería</button>
-                <button class="tab-btn" onclick="filtrarCategoria('hogar', this)">Hogar</button>
-                <button class="tab-btn" onclick="filtrarCategoria('oficina', this)">Oficina y escolar</button>
-                <button class="tab-btn" onclick="filtrarCategoria('ofertas', this)">Ofertas y bajos precios</button>
+                <button class="tab-btn activo" data-cat="todos" onclick="filtrarCategoria('todos', this)"><span class="tab-emoji" aria-hidden="true">🧭</span>Todos</button>
+                <button class="tab-btn" data-cat="accesorios" onclick="filtrarCategoria('accesorios', this)"><span class="tab-emoji" aria-hidden="true">🚗🏍️</span>Accesorios para carros y motos</button>
+                <button class="tab-btn" data-cat="luces" onclick="filtrarCategoria('luces', this)"><span class="tab-emoji" aria-hidden="true">💡</span>Luces para auto y moto</button>
+                <button class="tab-btn" data-cat="neblineras" onclick="filtrarCategoria('neblineras', this)"><span class="tab-emoji" aria-hidden="true">🌫️</span>Neblineras para carro y moto</button>
+                <button class="tab-btn" data-cat="tecnologia" onclick="filtrarCategoria('tecnologia', this)"><span class="tab-emoji" aria-hidden="true">📱</span>Tecnología</button>
+                <button class="tab-btn" data-cat="ferreteria" onclick="filtrarCategoria('ferreteria', this)"><span class="tab-emoji" aria-hidden="true">🛠️</span>Ferretería</button>
+                <button class="tab-btn" data-cat="hogar" onclick="filtrarCategoria('hogar', this)"><span class="tab-emoji" aria-hidden="true">🏠</span>Hogar</button>
+                <button class="tab-btn" data-cat="oficina" onclick="filtrarCategoria('oficina', this)"><span class="tab-emoji" aria-hidden="true">📚</span>Oficina y escolar</button>
+                <button class="tab-btn" data-cat="ofertas" onclick="filtrarCategoria('ofertas', this)"><span class="tab-emoji" aria-hidden="true">🏷️</span>Ofertas y bajos precios</button>
             </div>
 
             <!-- Selector de Orden -->
@@ -92,7 +98,7 @@
 
     <!--===========================================================================================-->
     <!-- Botón Flotante del Carrito -->
-    <button class="cart-float-btn" onclick="abrirCarrito()">
+    <button class="cart-float-btn" onclick="abrirCarrito()" aria-label="Abrir carrito de compras">
         🛒 Mi Carrito <span class="cart-badge" id="cart-count">0</span>
     </button>
 
@@ -168,6 +174,9 @@
         let todosLosProductos = [];
         let categoriaActual = 'todos';
         let carrito = JSON.parse(localStorage.getItem('carrito')) || [];
+        let ultimoFoco = null;
+        let sugerenciasActuales = [];
+        let indiceSugerenciaActiva = -1;
 
         function escapeHtml(texto) {
             return String(texto ?? '')
@@ -181,6 +190,222 @@
         function sanitizarUrl(url) {
             if (!url) return 'img/placeholder.jpg';
             return String(url).replace(/['"<>`]/g, '');
+        }
+
+        function normalizarTextoBusqueda(texto) {
+            return String(texto || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function tokenizarBusqueda(consultaNormalizada) {
+            return consultaNormalizada.split(' ').map(t => t.trim()).filter(Boolean);
+        }
+
+        function distanciaLevenshtein(a, b) {
+            if (a === b) return 0;
+            if (!a.length) return b.length;
+            if (!b.length) return a.length;
+
+            const matriz = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+            for (let i = 0; i <= a.length; i++) matriz[i][0] = i;
+            for (let j = 0; j <= b.length; j++) matriz[0][j] = j;
+
+            for (let i = 1; i <= a.length; i++) {
+                for (let j = 1; j <= b.length; j++) {
+                    const costo = a[i - 1] === b[j - 1] ? 0 : 1;
+                    matriz[i][j] = Math.min(
+                        matriz[i - 1][j] + 1,
+                        matriz[i][j - 1] + 1,
+                        matriz[i - 1][j - 1] + costo
+                    );
+                }
+            }
+            return matriz[a.length][b.length];
+        }
+
+        function calcularScoreProducto(prod, consultaNormalizada, tokens) {
+            const tituloOriginal = String(prod.titulo || '');
+            const titulo = normalizarTextoBusqueda(tituloOriginal);
+            const categoria = normalizarCategoria(prod.categoria);
+            const corpus = `${titulo} ${categoria} ${String(prod.id || '')}`.trim();
+            const palabras = corpus.split(' ').filter(Boolean);
+
+            let score = 0;
+
+            if (consultaNormalizada && titulo.includes(consultaNormalizada)) {
+                score += 45;
+                if (titulo.startsWith(consultaNormalizada)) score += 20;
+            }
+
+            for (const token of tokens) {
+                if (corpus.includes(token)) score += 12;
+                if (titulo.startsWith(token)) score += 10;
+                if (palabras.some(p => p.startsWith(token))) score += 9;
+
+                if (token.length >= 4) {
+                    let cercano = false;
+                    for (const palabra of palabras) {
+                        if (Math.abs(palabra.length - token.length) > 1) continue;
+                        if (distanciaLevenshtein(token, palabra) <= 1) {
+                            cercano = true;
+                            break;
+                        }
+                    }
+                    if (cercano) score += 5;
+                }
+            }
+
+            if (tokens.length > 1 && tokens.every(t => corpus.includes(t))) {
+                score += 14;
+            }
+
+            return score;
+        }
+
+        function rankearProductosPorTexto(productos, consultaNormalizada) {
+            const tokens = tokenizarBusqueda(consultaNormalizada);
+            if (!tokens.length) return [];
+
+            return productos
+                .map(prod => ({ prod, score: calcularScoreProducto(prod, consultaNormalizada, tokens) }))
+                .filter(item => item.score > 0)
+                .sort((a, b) => b.score - a.score || String(a.prod.titulo || '').localeCompare(String(b.prod.titulo || ''), 'es'));
+        }
+
+        function obtenerTerminosOriginales() {
+            const raw = String(document.getElementById('input-busqueda')?.value || '').trim();
+            return raw.split(/\s+/).filter(Boolean);
+        }
+
+        function resaltarCoincidencias(texto, terminos) {
+            let html = escapeHtml(texto || '');
+            const unicos = Array.from(new Set((terminos || []).map(t => t.trim()).filter(t => t.length > 1)));
+            unicos.sort((a, b) => b.length - a.length);
+
+            for (const termino of unicos) {
+                const safe = termino.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(${safe})`, 'ig');
+                html = html.replace(regex, '<mark>$1</mark>');
+            }
+            return html;
+        }
+
+        function actualizarCategoriaActivaUI(cat) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('activo', btn.dataset.cat === cat);
+            });
+        }
+
+        function ocultarSugerencias() {
+            const box = document.getElementById('sugerencias-busqueda');
+            if (!box) return;
+            box.classList.remove('show');
+            box.innerHTML = '';
+            sugerenciasActuales = [];
+            indiceSugerenciaActiva = -1;
+        }
+
+        function renderSugerencias(productosRankeados) {
+            const box = document.getElementById('sugerencias-busqueda');
+            if (!box) return;
+
+            sugerenciasActuales = productosRankeados.slice(0, 6).map(item => item.prod);
+            indiceSugerenciaActiva = -1;
+
+            if (!sugerenciasActuales.length) {
+                box.classList.remove('show');
+                box.innerHTML = '';
+                return;
+            }
+
+            const terminos = obtenerTerminosOriginales();
+            box.innerHTML = sugerenciasActuales.map((p, i) => `
+                <button type="button" class="sugerencia-item" onclick="seleccionarSugerencia(${i})">
+                    <span class="sugerencia-titulo">${resaltarCoincidencias(p.titulo || 'Producto', terminos)}</span>
+                    <span class="sugerencia-meta">${escapeHtml(normalizarCategoria(p.categoria || 'todos'))}</span>
+                </button>
+            `).join('');
+            box.classList.add('show');
+        }
+
+        function seleccionarSugerencia(indice) {
+            const prod = sugerenciasActuales[indice];
+            if (!prod) return;
+
+            const input = document.getElementById('input-busqueda');
+            if (input) input.value = String(prod.titulo || '');
+            buscarGeneralRelacionada();
+        }
+
+        function actualizarSugerencias() {
+            const input = document.getElementById('input-busqueda');
+            const consultaNormalizada = normalizarTextoBusqueda(input?.value || '');
+            if (!consultaNormalizada) {
+                ocultarSugerencias();
+                return;
+            }
+
+            const base = todosLosProductos.filter(p => normalizarCategoria(p.categoria) !== 'pendiente');
+            const ranked = rankearProductosPorTexto(base, consultaNormalizada);
+            renderSugerencias(ranked);
+        }
+
+        function moverSugerenciaActiva(direccion) {
+            const box = document.getElementById('sugerencias-busqueda');
+            if (!box || !sugerenciasActuales.length) return;
+
+            indiceSugerenciaActiva += direccion;
+            if (indiceSugerenciaActiva < 0) indiceSugerenciaActiva = sugerenciasActuales.length - 1;
+            if (indiceSugerenciaActiva >= sugerenciasActuales.length) indiceSugerenciaActiva = 0;
+
+            box.querySelectorAll('.sugerencia-item').forEach((el, i) => {
+                el.classList.toggle('active', i === indiceSugerenciaActiva);
+            });
+        }
+
+        function onInputBusqueda() {
+            actualizarSugerencias();
+            aplicarFiltrosYOrden();
+        }
+
+        function onBusquedaKeydown(event) {
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                moverSugerenciaActiva(1);
+                return;
+            }
+
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                moverSugerenciaActiva(-1);
+                return;
+            }
+
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (indiceSugerenciaActiva >= 0) {
+                    seleccionarSugerencia(indiceSugerenciaActiva);
+                } else {
+                    buscarGeneralRelacionada();
+                }
+                return;
+            }
+
+            if (event.key === 'Escape') {
+                ocultarSugerencias();
+            }
+        }
+
+        function buscarGeneralRelacionada() {
+            categoriaActual = 'todos';
+            actualizarCategoriaActivaUI('todos');
+            ocultarSugerencias();
+            aplicarFiltrosYOrden();
         }
 
         async function cargarTienda() {
@@ -221,6 +446,15 @@ function normalizarCategoria(valor) {
         'accesorios': 'accesorios',
         'carros': 'accesorios',
         'motos': 'accesorios',
+        'luces': 'luces',
+        'luces-auto-moto': 'luces',
+        'luces para auto y moto': 'luces',
+        'neblinera': 'neblineras',
+        'neblineras': 'neblineras',
+        'neblinero': 'neblineras',
+        'neblineros': 'neblineras',
+        'neblineras para carro y moto': 'neblineras',
+        'neblineros para carro y moto': 'neblineras',
         'tecnologia': 'tecnologia',
         'ferreteria': 'ferreteria',
         'hogar': 'hogar',
@@ -228,6 +462,7 @@ function normalizarCategoria(valor) {
         'oficina-escolar': 'oficina',
         'escolar': 'oficina',
         'ofertas': 'ofertas',
+        'pendiente': 'pendiente',
         'todos': 'todos'
     };
 
@@ -235,26 +470,34 @@ function normalizarCategoria(valor) {
 }
 
 function aplicarFiltrosYOrden() {
-    const textoBusqueda = document.getElementById('input-busqueda').value.toLowerCase();
+    const textoBusqueda = document.getElementById('input-busqueda').value;
+    const textoBusquedaNormalizado = normalizarTextoBusqueda(textoBusqueda);
     const tipoOrden = document.getElementById('select-orden').value;
     const categoriaSeleccionada = normalizarCategoria(categoriaActual);
 
     let resultados = todosLosProductos.filter(prod => {
         const categoriaProd = normalizarCategoria(prod.categoria);
 
-        if (categoriaSeleccionada === 'todos') return true;
+        if (categoriaSeleccionada === 'todos') return categoriaProd !== 'pendiente';
         if (categoriaSeleccionada === 'ofertas') return Number(prod.precio_venta || 0) < 15;
         return categoriaProd === categoriaSeleccionada;
     });
 
-    resultados = resultados.filter(prod => 
-        (prod.titulo || '').toLowerCase().includes(textoBusqueda)
-    );
+    if (textoBusquedaNormalizado) {
+        const rankeados = rankearProductosPorTexto(resultados, textoBusquedaNormalizado);
+        resultados = rankeados.map(item => item.prod);
 
-    if (tipoOrden === 'precio-bajo') {
-        resultados.sort((a, b) => Number(a.precio_venta || 0) - Number(b.precio_venta || 0));
-    } else if (tipoOrden === 'precio-alto') {
-        resultados.sort((a, b) => Number(b.precio_venta || 0) - Number(a.precio_venta || 0));
+        if (tipoOrden === 'precio-bajo') {
+            resultados.sort((a, b) => Number(a.precio_venta || 0) - Number(b.precio_venta || 0));
+        } else if (tipoOrden === 'precio-alto') {
+            resultados.sort((a, b) => Number(b.precio_venta || 0) - Number(a.precio_venta || 0));
+        }
+    } else {
+        if (tipoOrden === 'precio-bajo') {
+            resultados.sort((a, b) => Number(a.precio_venta || 0) - Number(b.precio_venta || 0));
+        } else if (tipoOrden === 'precio-alto') {
+            resultados.sort((a, b) => Number(b.precio_venta || 0) - Number(a.precio_venta || 0));
+        }
     }
 
     renderizarProductos(resultados);
@@ -274,7 +517,9 @@ function renderizarProductos(productosParaMostrar) {
         const stock = Number(prod.stock ?? 0);
         const destacado = !!prod.destacado;
         const agotado = stock <= 0;
-        const titulo = escapeHtml(prod.titulo || 'Producto');
+        const tituloBase = String(prod.titulo || 'Producto');
+        const tituloEscapado = escapeHtml(tituloBase);
+        const titulo = resaltarCoincidencias(tituloBase, obtenerTerminosOriginales());
         const precio = Number(prod.precio_venta || 0);
         const imgSrc = sanitizarUrl(prod.imagen || 'img/placeholder.jpg');
 
@@ -282,7 +527,7 @@ function renderizarProductos(productosParaMostrar) {
 
         card.innerHTML = `
             <div class="card-img-container">
-                <img src="${imgSrc}" alt="${titulo}" onclick="abrirProductoModal(${prod.id})" style="cursor:pointer;">
+                <img src="${imgSrc}" alt="${tituloEscapado}" class="card-img-trigger" role="button" tabindex="0" aria-label="Ver detalle de ${tituloEscapado}" onclick="abrirProductoModal(${prod.id})" onkeydown="onProductoImagenKeydown(event, ${prod.id})">
                 ${destacado ? '<span class="badge-destacado">Destacado</span>' : ''}
                 ${agotado ? '<span class="badge-agotado">Agotado</span>' : ''}
             </div>
@@ -296,6 +541,13 @@ function renderizarProductos(productosParaMostrar) {
         `;
         grid.appendChild(card);
     });
+}
+
+function onProductoImagenKeydown(event, idProducto) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        abrirProductoModal(idProducto);
+    }
 }
 
 function agregarAlCarrito(idProducto) {
@@ -374,8 +626,11 @@ function actualizarBadgeCarrito() {
 }
 
 function abrirCarrito() {
+    ultimoFoco = document.activeElement;
     document.getElementById('modal-carrito').classList.add('activo');
     renderizarCarrito();
+    const cerrarBtn = document.querySelector('#modal-carrito .btn-close-modal');
+    if (cerrarBtn) cerrarBtn.focus();
 }
 
 function cerrarCarrito() {
@@ -383,6 +638,7 @@ function cerrarCarrito() {
     document.getElementById('cart-modal-box').classList.remove('minimizado');
     const btnToggle = document.getElementById('btn-toggle-cart');
     if (btnToggle) btnToggle.textContent = '—';
+    restaurarFoco();
 }
 
 function abrirProductoModal(idProducto) {
@@ -413,12 +669,61 @@ function abrirProductoModal(idProducto) {
         </div>
     `;
 
-    if (modal) modal.classList.add('activo');
+    if (modal) {
+        ultimoFoco = document.activeElement;
+        modal.classList.add('activo');
+        const cerrarBtn = document.querySelector('#modal-producto .product-close');
+        if (cerrarBtn) cerrarBtn.focus();
+    }
 }
 
 function cerrarProductoModal() {
     const modal = document.getElementById('modal-producto');
     if (modal) modal.classList.remove('activo');
+    restaurarFoco();
+}
+
+function restaurarFoco() {
+    if (ultimoFoco && typeof ultimoFoco.focus === 'function') {
+        ultimoFoco.focus();
+    }
+}
+
+function configurarAccesibilidadTeclado() {
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            const modalProducto = document.getElementById('modal-producto');
+            const modalCarrito = document.getElementById('modal-carrito');
+
+            if (modalProducto && modalProducto.classList.contains('activo')) {
+                cerrarProductoModal();
+                return;
+            }
+
+            if (modalCarrito && modalCarrito.classList.contains('activo')) {
+                cerrarCarrito();
+            }
+        }
+    });
+
+    const modalProducto = document.getElementById('modal-producto');
+    const modalCarrito = document.getElementById('modal-carrito');
+
+    if (modalProducto) {
+        modalProducto.addEventListener('click', (event) => {
+            if (event.target === modalProducto) {
+                cerrarProductoModal();
+            }
+        });
+    }
+
+    if (modalCarrito) {
+        modalCarrito.addEventListener('click', (event) => {
+            if (event.target === modalCarrito) {
+                cerrarCarrito();
+            }
+        });
+    }
 }
 
 function toggleCarritoTamano() {
@@ -520,6 +825,24 @@ function enviarPedidoWhatsApp() {
 window.addEventListener('DOMContentLoaded', () => {
     cargarTienda();
     escucharCambiosInventario();
+    configurarAccesibilidadTeclado();
+
+    const inputBusqueda = document.getElementById('input-busqueda');
+    if (inputBusqueda) {
+        inputBusqueda.addEventListener('focus', () => {
+            if (inputBusqueda.value.trim()) {
+                actualizarSugerencias();
+            }
+        });
+    }
+
+    document.addEventListener('click', (event) => {
+        const contenedor = document.querySelector('.busqueda-wrap');
+        if (!contenedor) return;
+        if (!contenedor.contains(event.target)) {
+            ocultarSugerencias();
+        }
+    });
 });
     </script>
 </body>
