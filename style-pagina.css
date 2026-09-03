@@ -268,6 +268,25 @@ summary:focus-visible,
     }
 }
 
+
+/*=======================================================
+OCULTAR BOTON DE COMPRA
+========================================================*/
+
+/* Ocultar botón flotante por defecto con transición */
+.cart-float-btn {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.2s ease;
+}
+
+/* Estado visible al agregar un producto */
+.cart-float-btn.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+
 /* ==========================================
    SECCIÓN DE SERVICIOS DE DESARROLLO
    ========================================== */
