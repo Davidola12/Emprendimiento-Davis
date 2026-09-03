@@ -773,6 +773,33 @@ function mostrarCarritoTemporalmente() {
             if (badge) badge.innerText = totalItems;
         }
 
+
+        function agregarAlCarrito(idProducto) {
+    const producto = todosLosProductos.find(p => p.id === idProducto);
+    if (!producto) return;
+
+    const stock = Number(producto.stock ?? 0);
+    if (stock <= 0) return;
+
+    const itemExistente = carrito.find(p => p.id === idProducto);
+    if (itemExistente) {
+        itemExistente.cantidad++;
+    } else {
+        carrito.push({ ...producto, cantidad: 1 });
+    }
+
+    guardarCarrito();
+    actualizarBadgeCarrito();
+    
+    // ---> LÍNEA A AGREGAR <---
+    mostrarCarritoTemporalmente();
+
+    const badge = document.getElementById('cart-count');
+    badge.style.transform = 'scale(1.4)';
+    setTimeout(() => badge.style.transform = 'scale(1)', 200);
+}
+
+        
         function abrirCarrito() {
             ultimoFoco = document.activeElement;
             document.getElementById('modal-carrito').classList.add('activo');
