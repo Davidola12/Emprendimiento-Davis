@@ -286,6 +286,24 @@
         let ultimoFoco = null;
         let sugerenciasActuales = [];
         let indiceSugerenciaActiva = -1;
+        let timerCarritoFlotante = null;
+
+function mostrarCarritoTemporalmente() {
+    const btnCarrito = document.querySelector('.cart-float-btn');
+    if (!btnCarrito) return;
+
+    btnCarrito.classList.add('visible');
+
+    // Si vuelven a agregar otro producto antes de los 5s, reinicia la cuenta
+    if (timerCarritoFlotante) {
+        clearTimeout(timerCarritoFlotante);
+    }
+
+    // Oculta el botón exactamente a los 5 segundos (5000 ms)
+    timerCarritoFlotante = setTimeout(() => {
+        btnCarrito.classList.remove('visible');
+    }, 5000);
+}
 
         function escapeHtml(texto) {
             return String(texto ?? '')
