@@ -806,25 +806,14 @@ function abrirLightbox(src, caption) {
     if (!lb || !img) return;
     img.src = src;
     img.alt = caption || '';
-    img.classList.remove('zoomado');
     cap.textContent = caption || '';
     lb.classList.add('activo');
-    img.addEventListener('click', toggleZoomLightbox);
     const closeBtn = document.querySelector('.lightbox-close');
     if (closeBtn) closeBtn.focus();
 }
 
-function toggleZoomLightbox(event) {
-    const img = document.getElementById('lightbox-img');
-    if (!img) return;
-    img.classList.toggle('zoomado');
-    event.stopPropagation();
-}
-
 function cerrarLightbox() {
     const lb = document.getElementById('lightbox');
-    const img = document.getElementById('lightbox-img');
-    if (img) img.removeEventListener('click', toggleZoomLightbox);
     if (lb) lb.classList.remove('activo');
     restaurarFoco();
 }
