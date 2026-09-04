@@ -536,17 +536,48 @@ summary:focus-visible,
     100% { transform: scale(0.92) rotate(0deg); }
 }
 
+/* Fila de orden y filtro de precio */
+.fila-orden-precio {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.orden-wrap,
+.filtro-precio {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 300px;
+    max-width: 100%;
+}
+
+.control-label {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
 #select-orden {
-    padding: 12px 18px;
-    border-radius: 999px;
+    padding: 12px 16px;
+    border-radius: 14px;
     border: 1px solid #dbe3ee;
     background-color: white;
     font-size: 0.96rem;
     outline: none;
     cursor: pointer;
-    max-width: 320px;
-    margin: 0 auto;
     color: #1f2937;
+    width: 100%;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#select-orden:focus {
+    border-color: rgba(37, 99, 235, 0.6);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 /* Contenido de servicios dentro del grid de categorías */
@@ -798,6 +829,10 @@ summary:focus-visible,
     height: 38px;
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0f172a;
 }
 
 .product-close:hover {
@@ -944,6 +979,10 @@ summary:focus-visible,
     border-radius: 8px;
     cursor: pointer;
     font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
 }
 
 .btn-close-modal:hover,
@@ -1306,5 +1345,340 @@ summary:focus-visible,
     .btn-cotizar,
     .btn-remove-item {
         min-height: 46px;
+    }
+}
+
+/* ==========================================
+   LIGHTBOX DE IMAGEN A PANTALLA COMPLETA
+   ========================================== */
+.lightbox {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(15, 23, 42, 0.92);
+    z-index: 1100;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.lightbox.activo {
+    display: flex;
+}
+
+.lightbox-content {
+    max-width: 92vw;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.lightbox-content img {
+    max-width: 92vw;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    background: #ffffff;
+}
+
+.lightbox-caption {
+    color: #e2e8f0;
+    margin-top: 14px;
+    font-size: 0.95rem;
+    text-align: center;
+    max-width: 80vw;
+}
+
+.lightbox-close {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    width: 48px;
+    height: 48px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    font-size: 1.3rem;
+    font-weight: 800;
+    cursor: pointer;
+    z-index: 1200;
+    transition: background 0.2s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.28);
+    transform: scale(1.1);
+}
+
+.product-modal-image {
+    cursor: pointer;
+}
+
+/* ==========================================
+   BOTÓN FLOTANTE DE WHATSAPP
+   ========================================== */
+.whatsapp-float {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    width: 58px;
+    height: 58px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #25d366 0%, #1ebe5d 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.7rem;
+    text-decoration: none;
+    box-shadow: 0 12px 28px rgba(37, 211, 102, 0.35);
+    z-index: 990;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.whatsapp-float:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 18px 32px rgba(37, 211, 102, 0.45);
+}
+
+.whatsapp-float .whatsapp-icon {
+    line-height: 1;
+}
+
+@media (max-width: 768px) {
+    .whatsapp-float {
+        bottom: 96px;
+        left: 16px;
+        width: 52px;
+        height: 52px;
+        font-size: 1.5rem;
+    }
+}
+
+/* ==========================================
+   BADGE DE OFERTA
+   ========================================== */
+.badge-oferta {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+    color: #ffffff;
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    box-shadow: 0 6px 14px rgba(234, 88, 12, 0.35);
+    animation: oferta-pulse 1.8s ease-in-out infinite;
+    z-index: 2;
+}
+
+@keyframes oferta-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+}
+
+.badge-oferta-modal {
+    display: inline-block;
+    background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    width: fit-content;
+    margin-bottom: 12px;
+    box-shadow: 0 6px 14px rgba(234, 88, 12, 0.35);
+}
+
+/* ==========================================
+   PRODUCTOS RECIENTEMENTE VISTOS
+   ========================================== */
+.recientes-bloque {
+    grid-column: 1 / -1;
+    margin-top: 20px;
+    padding: 20px 0;
+    border-top: 2px dashed #e2e8f0;
+}
+
+.recientes-titulo {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 14px;
+}
+
+.recientes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 12px;
+}
+
+.reciente-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    padding-bottom: 8px;
+}
+
+.reciente-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 20px rgba(15, 23, 42, 0.1);
+}
+
+.reciente-item img {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    background: #f1f5f9;
+    display: block;
+}
+
+.reciente-precio {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #0f766e;
+}
+
+/* ==========================================
+   FILTRO POR PRECIO MÁXIMO
+   ========================================== */
+.filtro-precio {
+    font-size: 0.9rem;
+    color: #475569;
+}
+
+.filtro-precio #precio-max-label {
+    color: #1d4ed8;
+    font-weight: 800;
+}
+
+.filtro-precio input[type="range"] {
+    width: 100%;
+    accent-color: #2563eb;
+    cursor: pointer;
+}
+
+.btn-limpiar-precio {
+    margin-top: 8px;
+    border: 1px solid #fecaca;
+    background: #fff1f2;
+    color: #dc2626;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-limpiar-precio:hover {
+    background: #fee2e2;
+}
+
+/* ==========================================
+   REFINAMIENTO RESPONSIVE GLOBAL
+   ========================================== */
+
+/* Pestañas de categorías: 3 por fila en tablet para evitar desorden */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .tab-btn {
+        flex: 1 1 calc(33.333% - 8px);
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.9rem;
+        padding: 10px 10px;
+    }
+    .tab-emoji {
+        flex-shrink: 0;
+    }
+}
+
+/* Pestañas en PC grande: ancho natural, centradas y con wrap ordenado */
+@media (min-width: 1024px) {
+    .categorias-tabs {
+        gap: 10px;
+    }
+    .tab-btn {
+        white-space: nowrap;
+    }
+}
+
+/* Ajuste del grid de 2 columnas en móviles grandes y tablets pequeñas */
+@media (min-width: 576px) and (max-width: 719px) {
+    .card-img-container {
+        height: 180px;
+    }
+}
+
+/* El botón del carrito no debe tapar el WhatsApp ni desbordar */
+@media (max-width: 640px) {
+    .whatsapp-float {
+        bottom: 92px;
+        left: 14px;
+        z-index: 989;
+    }
+    .fila-orden-precio {
+        gap: 12px;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .orden-wrap,
+    .filtro-precio {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* Lightbox en pantallas pequeñas */
+@media (max-width: 640px) {
+    .lightbox {
+        padding: 10px;
+    }
+    .lightbox-content {
+        max-width: 96vw;
+        max-height: 90vh;
+        justify-content: center;
+    }
+    .lightbox-content img {
+        max-width: 96vw;
+        max-height: 82vh;
+        border-radius: 10px;
+    }
+    .lightbox-close {
+        top: 12px;
+        right: 12px;
+        width: 44px;
+        height: 44px;
+    }
+    .lightbox-caption {
+        font-size: 0.85rem;
+        margin-top: 10px;
+    }
+}
+
+/* Recientes vistos: más columnas en PC */
+@media (min-width: 768px) {
+    .recientes-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
     }
 }
