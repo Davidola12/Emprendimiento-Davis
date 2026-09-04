@@ -549,6 +549,27 @@ summary:focus-visible,
     color: #1f2937;
 }
 
+/* Contenido de servicios dentro del grid de categorías */
+.servicios-grid-inline {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 24px;
+    padding: 10px 0 20px;
+}
+
+@media (min-width: 768px) {
+    .servicios-grid-inline {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.servicios-cta-inline {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 10px 0 0;
+}
+
 /* Botón de Cotizar Servicios */
 .servicios-cta {
     text-align: center;
@@ -593,11 +614,20 @@ summary:focus-visible,
     align-items: center;
     gap: 10px;
     z-index: 999;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(30px);
+    transition: opacity 0.35s ease, transform 0.35s ease, box-shadow 0.2s ease;
 }
 
-.cart-float-btn:hover {
-    transform: translateY(-2px);
+.cart-float-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+.cart-float-btn.visible:hover {
+    transform: translateX(0) translateY(-2px);
     box-shadow: 0 18px 30px rgba(37, 99, 235, 0.3);
 }
 
@@ -609,6 +639,46 @@ summary:focus-visible,
     padding: 3px 8px;
     min-width: 22px;
     text-align: center;
+    transition: transform 0.2s ease;
+}
+
+@keyframes badge-pulse {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+}
+
+.cart-badge.pulse {
+    animation: badge-pulse 0.4s ease;
+}
+
+/* Botón Volver al Inicio */
+.btn-volver-inicio {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    padding: 24px 0 12px;
+}
+
+.btn-volver-inicio button {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 999px;
+    padding: 14px 32px;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 12px 22px rgba(37, 99, 235, 0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-volver-inicio button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 26px rgba(37, 99, 235, 0.28);
 }
 
 .modal-overlay {
