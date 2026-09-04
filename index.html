@@ -50,6 +50,13 @@
                 <option value="precio-bajo">Precio: Menor a Mayor</option>
                 <option value="precio-alto">Precio: Mayor a Menor</option>
             </select>
+
+            <!-- Filtro por Precio Máximo -->
+            <div class="filtro-precio">
+                <label for="range-precio">Precio máximo: <span id="precio-max-label">Sin límite</span></label>
+                <input type="range" id="range-precio" min="0" max="200" step="5" value="200" oninput="aplicarFiltroPrecio(this.value)">
+                <button type="button" class="btn-limpiar-precio" onclick="limpiarFiltroPrecio()" id="btn-limpiar-precio" style="display:none;">✕ Quitar filtro</button>
+            </div>
         </div>
 
         <!-- Grid de Productos -->
@@ -131,6 +138,25 @@
         </div>
     </div>
 
+    <!-- ==========================================
+         LIGHTBOX DE IMAGEN A PANTALLA COMPLETA
+         ========================================== -->
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close" onclick="cerrarLightbox()" aria-label="Cerrar imagen">✕</button>
+        <div class="lightbox-content">
+            <img id="lightbox-img" src="" alt="">
+            <p class="lightbox-caption" id="lightbox-caption"></p>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         BOTÓN FLOTANTE DE WHATSAPP (Consultas)
+         ========================================== -->
+    <a href="https://wa.me/50239710831?text=Hola,%20tengo%20una%20consulta%20sobre%20tu%20tienda." 
+       class="whatsapp-float" target="_blank" rel="noopener" aria-label="Contactar por WhatsApp">
+        <span class="whatsapp-icon">💬</span>
+    </a>
+
    <script>
         let todosLosProductos = [];
         let categoriaActual = 'todos';
@@ -139,6 +165,9 @@
         let sugerenciasActuales = [];
         let indiceSugerenciaActiva = -1;
         let timerCarrito = null;
+        let recientesVistos = JSON.parse(localStorage.getItem('recientes_vistos')) || [];
+        let precioMaximoActual = null;
+        let touchInicioY = 0;
 
         function escapeHtml(texto) {
             return String(texto ?? '')
@@ -451,6 +480,10 @@ function aplicarFiltrosYOrden() {
         return categoriaProd === categoriaSeleccionada;
     });
 
+    if (precioMaximoActual !== null) {
+        resultados = resultados.filter(prod => Number(prod.precio_venta || 0) <= precioMaximoActual);
+    }
+
     if (textoBusquedaNormalizado) {
         const rankeados = rankearProductosPorTexto(resultados, textoBusquedaNormalizado);
         resultados = rankeados.map(item => item.prod);
@@ -469,6 +502,27 @@ function aplicarFiltrosYOrden() {
     }
 
     renderizarProductos(resultados);
+}
+
+function aplicarFiltroPrecio(valor) {
+    const max = Number(valor);
+    const label = document.getElementById('precio-max-label');
+    const resetBtn = document.getElementById('btn-limpiar-precio');
+    if (max >= 200) {
+        precioMaximoActual = null;
+        if (label) label.textContent = 'Sin límite';
+    } else {
+        precioMaximoActual = max;
+        if (label) label.textContent = 'Q' + max.toFixed(2);
+    }
+    if (resetBtn) resetBtn.style.display = precioMaximoActual === null ? 'none' : 'inline-block';
+    aplicarFiltrosYOrden();
+}
+
+function limpiarFiltroPrecio() {
+    const range = document.getElementById('range-precio');
+    if (range) range.value = 200;
+    aplicarFiltroPrecio(200);
 }
 
 function renderizarProductos(productosParaMostrar) {
@@ -518,6 +572,7 @@ function renderizarProductos(productosParaMostrar) {
         const titulo = resaltarCoincidencias(tituloBase, obtenerTerminosOriginales());
         const precio = Number(prod.precio_venta || 0);
         const imgSrc = sanitizarUrl(prod.imagen || 'img/placeholder.jpg');
+        const esOferta = precio < 15;
 
         card.className = `product-card ${agotado ? 'product-card-agotado' : ''} ${destacado ? 'product-card-destacado' : ''}`;
 
@@ -525,6 +580,7 @@ function renderizarProductos(productosParaMostrar) {
             <div class="card-img-container">
                 <img src="${imgSrc}" alt="${tituloEscapado}" class="card-img-trigger" role="button" tabindex="0" aria-label="Ver detalle de ${tituloEscapado}" onclick="abrirProductoModal(${prod.id})" onkeydown="onProductoImagenKeydown(event, ${prod.id})">
                 ${destacado ? '<span class="badge-destacado">Destacado</span>' : ''}
+                ${esOferta ? '<span class="badge-oferta">🔥 OFERTA</span>' : ''}
                 ${agotado ? '<span class="badge-agotado">Agotado</span>' : ''}
             </div>
             <div class="card-body">
@@ -537,6 +593,10 @@ function renderizarProductos(productosParaMostrar) {
         `;
         grid.appendChild(card);
     });
+
+    if (categoriaActual === 'todos') {
+        actualizarRecientesVistosUI();
+    }
 
     const volverInicio = document.createElement('div');
     volverInicio.className = 'btn-volver-inicio';
@@ -709,13 +769,16 @@ function abrirProductoModal(idProducto) {
     const categoria = escapeHtml(normalizarCategoria(producto.categoria || 'todos'));
     const precio = Number(producto.precio_venta || 0);
     const imagen = sanitizarUrl(producto.imagen || 'img/placeholder.jpg');
+    const esOferta = precio < 15;
 
     contenedor.innerHTML = `
         <div class="product-modal-image-wrap">
-            <img src="${imagen}" alt="${titulo}" class="product-modal-image">
+            <img src="${imagen}" alt="${titulo}" class="product-modal-image" onclick="abrirLightbox('${imagen}', '${titulo}')" role="button" tabindex="0" aria-label="Ampliar imagen">
+            <span class="product-modal-zoom-hint">🔍 Toca para ampliar</span>
         </div>
         <div class="product-modal-info">
             <span class="product-modal-category">${categoria}</span>
+            ${esOferta ? '<span class="badge-oferta-modal">🔥 OFERTA</span>' : ''}
             <h3>${titulo}</h3>
             <div class="product-modal-price">Q${precio.toFixed(2)}</div>
             <p class="product-modal-status">${stock > 0 ? 'Disponible ahora' : 'Agotado'}</p>
@@ -726,12 +789,76 @@ function abrirProductoModal(idProducto) {
         </div>
     `;
 
+    registrarRecienteVisto(producto);
+
     if (modal) {
         ultimoFoco = document.activeElement;
         modal.classList.add('activo');
         const cerrarBtn = document.querySelector('#modal-producto .product-close');
         if (cerrarBtn) cerrarBtn.focus();
     }
+}
+
+function abrirLightbox(src, caption) {
+    const lb = document.getElementById('lightbox');
+    const img = document.getElementById('lightbox-img');
+    const cap = document.getElementById('lightbox-caption');
+    if (!lb || !img) return;
+    img.src = src;
+    img.alt = caption || '';
+    img.classList.remove('zoomado');
+    cap.textContent = caption || '';
+    lb.classList.add('activo');
+    img.addEventListener('click', toggleZoomLightbox);
+    const closeBtn = document.querySelector('.lightbox-close');
+    if (closeBtn) closeBtn.focus();
+}
+
+function toggleZoomLightbox(event) {
+    const img = document.getElementById('lightbox-img');
+    if (!img) return;
+    img.classList.toggle('zoomado');
+    event.stopPropagation();
+}
+
+function cerrarLightbox() {
+    const lb = document.getElementById('lightbox');
+    const img = document.getElementById('lightbox-img');
+    if (img) img.removeEventListener('click', toggleZoomLightbox);
+    if (lb) lb.classList.remove('activo');
+    restaurarFoco();
+}
+
+function registrarRecienteVisto(producto) {
+    if (!producto) return;
+    recientesVistos = recientesVistos.filter(p => p.id !== producto.id);
+    recientesVistos.unshift({ id: producto.id, titulo: producto.titulo, imagen: producto.imagen, precio_venta: producto.precio_venta, categoria: producto.categoria });
+    recientesVistos = recientesVistos.slice(0, 8);
+    localStorage.setItem('recientes_vistos', JSON.stringify(recientesVistos));
+    actualizarRecientesVistosUI();
+}
+
+function actualizarRecientesVistosUI() {
+    if (categoriaActual !== 'todos') return;
+    const grid = document.getElementById('grid-productos');
+    const bloque = document.getElementById('recientes-vistos-bloque');
+    if (!recientesVistos.length) return;
+    let bloqueHTML = `
+        <div class="recientes-bloque">
+            <h3 class="recientes-titulo">🕘 Recientemente vistos</h3>
+            <div class="recientes-grid">
+    `;
+    recientesVistos.forEach(p => {
+        const img = sanitizarUrl(p.imagen || 'img/placeholder.jpg');
+        bloqueHTML += `
+            <div class="reciente-item" onclick="abrirProductoModal(${p.id})" role="button" tabindex="0">
+                <img src="${img}" alt="${escapeHtml(p.titulo || '')}">
+                <span class="reciente-precio">Q${Number(p.precio_venta || 0).toFixed(2)}</span>
+            </div>
+        `;
+    });
+    bloqueHTML += `</div></div>`;
+    if (grid) grid.appendChild(bloqueHTML);
 }
 
 function cerrarProductoModal() {
@@ -751,6 +878,12 @@ function configurarAccesibilidadTeclado() {
         if (event.key === 'Escape') {
             const modalProducto = document.getElementById('modal-producto');
             const modalCarrito = document.getElementById('modal-carrito');
+            const lightbox = document.getElementById('lightbox');
+
+            if (lightbox && lightbox.classList.contains('activo')) {
+                cerrarLightbox();
+                return;
+            }
 
             if (modalProducto && modalProducto.classList.contains('activo')) {
                 cerrarProductoModal();
@@ -765,6 +898,7 @@ function configurarAccesibilidadTeclado() {
 
     const modalProducto = document.getElementById('modal-producto');
     const modalCarrito = document.getElementById('modal-carrito');
+    const lightbox = document.getElementById('lightbox');
 
     if (modalProducto) {
         modalProducto.addEventListener('click', (event) => {
@@ -781,6 +915,35 @@ function configurarAccesibilidadTeclado() {
             }
         });
     }
+
+    if (lightbox) {
+        lightbox.addEventListener('click', (event) => {
+            if (event.target === lightbox) {
+                cerrarLightbox();
+            }
+        });
+    }
+
+    configurarSwipeCierre();
+}
+
+function configurarSwipeCierre() {
+    const overlays = document.querySelectorAll('.modal-overlay');
+    overlays.forEach(overlay => {
+        overlay.addEventListener('touchstart', (event) => {
+            touchInicioY = event.touches[0].clientY;
+        }, { passive: true });
+
+        overlay.addEventListener('touchmove', (event) => {
+            if (touchInicioY === 0) return;
+            const diff = event.touches[0].clientY - touchInicioY;
+            if (diff > 50) {
+                if (overlay.id === 'modal-producto') cerrarProductoModal();
+                if (overlay.id === 'modal-carrito') cerrarCarrito();
+                touchInicioY = 0;
+            }
+        }, { passive: true });
+    });
 }
 
 function toggleCarritoTamano() {
