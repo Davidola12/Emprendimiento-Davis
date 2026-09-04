@@ -44,18 +44,22 @@
                 <button class="tab-btn" data-cat="servicios" onclick="filtrarCategoria('servicios', this)"><span class="tab-emoji" aria-hidden="true">👨‍💻</span>Servicios</button>
             </div>
 
-            <!-- Selector de Orden -->
-            <select id="select-orden" onchange="aplicarFiltrosYOrden()">
-                <option value="relevancia">Ordenar por: Relevancia</option>
-                <option value="precio-bajo">Precio: Menor a Mayor</option>
-                <option value="precio-alto">Precio: Mayor a Menor</option>
-            </select>
+            <!-- Selector de Orden y Filtro por Precio -->
+            <div class="fila-orden-precio">
+                <div class="orden-wrap">
+                    <label class="control-label" for="select-orden">Ordenar</label>
+                    <select id="select-orden" onchange="aplicarFiltrosYOrden()">
+                        <option value="relevancia">Relevancia</option>
+                        <option value="precio-bajo">Precio: Menor a Mayor</option>
+                        <option value="precio-alto">Precio: Mayor a Menor</option>
+                    </select>
+                </div>
 
-            <!-- Filtro por Precio Máximo -->
-            <div class="filtro-precio">
-                <label for="range-precio">Precio máximo: <span id="precio-max-label">Sin límite</span></label>
-                <input type="range" id="range-precio" min="0" max="200" step="5" value="200" oninput="aplicarFiltroPrecio(this.value)">
-                <button type="button" class="btn-limpiar-precio" onclick="limpiarFiltroPrecio()" id="btn-limpiar-precio" style="display:none;">✕ Quitar filtro</button>
+                <div class="filtro-precio">
+                    <label class="control-label" for="range-precio">Precio máx: <span id="precio-max-label">Sin límite</span></label>
+                    <input type="range" id="range-precio" min="0" max="200" step="5" value="200" oninput="aplicarFiltroPrecio(this.value)">
+                    <button type="button" class="btn-limpiar-precio" onclick="limpiarFiltroPrecio()" id="btn-limpiar-precio" style="display:none;">✕ Quitar filtro</button>
+                </div>
             </div>
         </div>
 
@@ -774,7 +778,6 @@ function abrirProductoModal(idProducto) {
     contenedor.innerHTML = `
         <div class="product-modal-image-wrap">
             <img src="${imagen}" alt="${titulo}" class="product-modal-image" onclick="abrirLightbox('${imagen}', '${titulo}')" role="button" tabindex="0" aria-label="Ampliar imagen">
-            <span class="product-modal-zoom-hint">🔍 Toca para ampliar</span>
         </div>
         <div class="product-modal-info">
             <span class="product-modal-category">${categoria}</span>
@@ -815,7 +818,13 @@ function abrirLightbox(src, caption) {
 function cerrarLightbox() {
     const lb = document.getElementById('lightbox');
     if (lb) lb.classList.remove('activo');
-    restaurarFoco();
+    const modal = document.getElementById('modal-producto');
+    if (modal && modal.classList.contains('activo')) {
+        const cerrarBtn = modal.querySelector('.product-close');
+        if (cerrarBtn) cerrarBtn.focus();
+    } else {
+        restaurarFoco();
+    }
 }
 
 function registrarRecienteVisto(producto) {
