@@ -847,7 +847,6 @@ function registrarRecienteVisto(producto) {
 function actualizarRecientesVistosUI() {
     if (categoriaActual !== 'todos') return;
     const grid = document.getElementById('grid-productos');
-    const bloque = document.getElementById('recientes-vistos-bloque');
     if (!recientesVistos.length) return;
     let bloqueHTML = `
         <div class="recientes-bloque">
@@ -864,7 +863,7 @@ function actualizarRecientesVistosUI() {
         `;
     });
     bloqueHTML += `</div></div>`;
-    if (grid) grid.appendChild(bloqueHTML);
+    if (grid) grid.insertAdjacentHTML('beforeend', bloqueHTML);
 }
 
 function cerrarProductoModal() {
