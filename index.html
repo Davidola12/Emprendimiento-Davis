@@ -18,46 +18,6 @@
         </div>
     </header>
 
-    <!--==========================================
-        SECCION DE BOTONES DE BUSQUEDA
-        =============================================-->
-        <!-- ==========================================
-         SECCIÓN DE SERVICIOS PROFESIONALES (Tus tarjetas)
-         ========================================== -->
-    <section class="servicios-section">
-        <div class="servicios-header">
-            <h2>Servicios de Desarrollo y Automatización</h2>
-            <p>Soluciones tecnológicas a medida para potenciar tu negocio o producción</p>
-        </div>
-        
-        <div class="servicios-grid">
-            <div class="servicio-card">
-                <div class="servicio-icon">🌐</div>
-                <h3>Páginas Web y Responsive</h3>
-                <p>Creación de sitios web modernos, rápidos y adaptables a cualquier dispositivo móvil usando HTML5 y CSS.</p>
-            </div>
-            
-            <div class="servicio-card">
-                <div class="servicio-icon">💻</div>
-                <h3>Aplicaciones de Escritorio</h3>
-                <p>Desarrollo de herramientas ligeras en Python y Java para automatización, inventarios y bases de datos SQL/Oracle.</p>
-            </div>
-            
-            <div class="servicio-card">
-                <div class="servicio-icon">⚙️</div>
-                <h3>Automatización y Broadcast</h3>
-                <p>Integraciones con WebSockets, plugins gráficos y rutinas para OBS y vMix en producción de video.</p>
-            </div>
-        </div>
-
-        <!-- Botón de Cotización Directa para tus Servicios -->
-        <div class="servicios-cta">
-            <a href="https://wa.me/50239710831?text=Hola,%20estoy%20interesado%20en%20contratar%20tus%20servicios%20de%20desarrollo." target="_blank" class="btn-cotizar">
-                💬 Cotizar Proyecto por WhatsApp
-            </a>
-        </div>
-    </section>
-
     <!-- ==========================================
          SECCIÓN DE TIENDA CON FILTROS Y ORDEN
          ========================================== -->
@@ -81,6 +41,7 @@
                 <button class="tab-btn" data-cat="hogar" onclick="filtrarCategoria('hogar', this)"><span class="tab-emoji" aria-hidden="true">🏠</span>Hogar</button>
                 <button class="tab-btn" data-cat="oficina" onclick="filtrarCategoria('oficina', this)"><span class="tab-emoji" aria-hidden="true">📚</span>Oficina y escolar</button>
                 <button class="tab-btn" data-cat="ofertas" onclick="filtrarCategoria('ofertas', this)"><span class="tab-emoji" aria-hidden="true">🏷️</span>Ofertas y bajos precios</button>
+                <button class="tab-btn" data-cat="servicios" onclick="filtrarCategoria('servicios', this)"><span class="tab-emoji" aria-hidden="true">👨‍💻</span>Servicios</button>
             </div>
 
             <!-- Selector de Orden -->
@@ -177,6 +138,7 @@
         let ultimoFoco = null;
         let sugerenciasActuales = [];
         let indiceSugerenciaActiva = -1;
+        let timerCarrito = null;
 
         function escapeHtml(texto) {
             return String(texto ?? '')
@@ -462,6 +424,7 @@ function normalizarCategoria(valor) {
         'oficina-escolar': 'oficina',
         'escolar': 'oficina',
         'ofertas': 'ofertas',
+        'servicios': 'servicios',
         'pendiente': 'pendiente',
         'todos': 'todos'
     };
@@ -474,6 +437,11 @@ function aplicarFiltrosYOrden() {
     const textoBusquedaNormalizado = normalizarTextoBusqueda(textoBusqueda);
     const tipoOrden = document.getElementById('select-orden').value;
     const categoriaSeleccionada = normalizarCategoria(categoriaActual);
+
+    if (categoriaSeleccionada === 'servicios') {
+        renderizarProductos([]);
+        return;
+    }
 
     let resultados = todosLosProductos.filter(prod => {
         const categoriaProd = normalizarCategoria(prod.categoria);
@@ -506,6 +474,34 @@ function aplicarFiltrosYOrden() {
 function renderizarProductos(productosParaMostrar) {
     const grid = document.getElementById('grid-productos');
     grid.innerHTML = '';
+
+    if (categoriaActual === 'servicios') {
+        grid.innerHTML = `
+            <div class="servicios-grid-inline">
+                <div class="servicio-card">
+                    <div class="servicio-icon">🌐</div>
+                    <h3>Páginas Web y Responsive</h3>
+                    <p>Creación de sitios web modernos, rápidos y adaptables a cualquier dispositivo móvil usando HTML5 y CSS.</p>
+                </div>
+                <div class="servicio-card">
+                    <div class="servicio-icon">💻</div>
+                    <h3>Aplicaciones de Escritorio</h3>
+                    <p>Desarrollo de herramientas ligeras en Python y Java para automatización, inventarios y bases de datos SQL/Oracle.</p>
+                </div>
+                <div class="servicio-card">
+                    <div class="servicio-icon">⚙️</div>
+                    <h3>Automatización y Broadcast</h3>
+                    <p>Integraciones con WebSockets, plugins gráficos y rutinas para OBS y vMix en producción de video.</p>
+                </div>
+            </div>
+            <div class="servicios-cta-inline">
+                <a href="https://wa.me/50239710831?text=Hola,%20estoy%20interesado%20en%20contratar%20tus%20servicios%20de%20desarrollo." target="_blank" class="btn-cotizar">
+                    💬 Cotizar Proyecto por WhatsApp
+                </a>
+            </div>
+        `;
+        return;
+    }
 
     if (productosParaMostrar.length === 0) {
         grid.innerHTML = '<p class="no-productos">No se encontraron productos disponibles en esta sección.</p>';
@@ -541,6 +537,11 @@ function renderizarProductos(productosParaMostrar) {
         `;
         grid.appendChild(card);
     });
+
+    const volverInicio = document.createElement('div');
+    volverInicio.className = 'btn-volver-inicio';
+    volverInicio.innerHTML = '<button onclick="window.scrollTo({ top: 0, behavior: \'smooth\' })">⬆ Volver al Inicio</button>';
+    grid.appendChild(volverInicio);
 }
 
 function onProductoImagenKeydown(event, idProducto) {
@@ -566,10 +567,57 @@ function agregarAlCarrito(idProducto) {
 
     guardarCarrito();
     actualizarBadgeCarrito();
-    
+    mostrarCarritoTemporal();
+}
+
+function mostrarCarritoTemporal() {
+    const btn = document.querySelector('.cart-float-btn');
     const badge = document.getElementById('cart-count');
-    badge.style.transform = 'scale(1.4)';
-    setTimeout(() => badge.style.transform = 'scale(1)', 200);
+    if (!btn) return;
+
+    if (timerCarrito) {
+        clearTimeout(timerCarrito);
+        timerCarrito = null;
+    }
+
+    btn.classList.add('visible');
+
+    if (badge) {
+        badge.classList.remove('pulse');
+        void badge.offsetWidth;
+        badge.classList.add('pulse');
+    }
+
+    timerCarrito = setTimeout(() => {
+        ocultarCarritoBtn();
+    }, 4000);
+}
+
+function ocultarCarritoBtn() {
+    const btn = document.querySelector('.cart-float-btn');
+    if (!btn) return;
+    if (carrito.length > 0 && document.getElementById('modal-carrito')?.classList.contains('activo')) return;
+    btn.classList.remove('visible');
+}
+
+function configurarBotonCarritoDinamico() {
+    const btn = document.querySelector('.cart-float-btn');
+    if (!btn) return;
+
+    btn.addEventListener('mouseenter', () => {
+        if (timerCarrito) {
+            clearTimeout(timerCarrito);
+            timerCarrito = null;
+        }
+    });
+
+    btn.addEventListener('mouseleave', () => {
+        if (carrito.length > 0 && !document.getElementById('modal-carrito')?.classList.contains('activo')) {
+            timerCarrito = setTimeout(() => {
+                ocultarCarritoBtn();
+            }, 4000);
+        }
+    });
 }
 
 function guardarCarrito() {
@@ -626,6 +674,10 @@ function actualizarBadgeCarrito() {
 }
 
 function abrirCarrito() {
+    if (timerCarrito) {
+        clearTimeout(timerCarrito);
+        timerCarrito = null;
+    }
     ultimoFoco = document.activeElement;
     document.getElementById('modal-carrito').classList.add('activo');
     renderizarCarrito();
@@ -639,6 +691,11 @@ function cerrarCarrito() {
     const btnToggle = document.getElementById('btn-toggle-cart');
     if (btnToggle) btnToggle.textContent = '—';
     restaurarFoco();
+    if (carrito.length > 0) {
+        timerCarrito = setTimeout(() => { ocultarCarritoBtn(); }, 4000);
+    } else {
+        ocultarCarritoBtn();
+    }
 }
 
 function abrirProductoModal(idProducto) {
@@ -747,6 +804,7 @@ function cambiarCantidad(idProducto, cambio) {
     guardarCarrito();
     actualizarBadgeCarrito();
     renderizarCarrito();
+    if (carrito.length === 0) ocultarCarritoBtn();
 }
 
 function quitarDelCarrito(idProducto) {
@@ -754,6 +812,7 @@ function quitarDelCarrito(idProducto) {
     guardarCarrito();
     actualizarBadgeCarrito();
     renderizarCarrito();
+    if (carrito.length === 0) ocultarCarritoBtn();
 }
 
 function actualizarTotales() {
@@ -826,6 +885,7 @@ window.addEventListener('DOMContentLoaded', () => {
     cargarTienda();
     escucharCambiosInventario();
     configurarAccesibilidadTeclado();
+    configurarBotonCarritoDinamico();
 
     const inputBusqueda = document.getElementById('input-busqueda');
     if (inputBusqueda) {
